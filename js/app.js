@@ -28,33 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
         loader.setAttribute('aria-hidden', 'false');
         resultSection.textContent = "";
 
-        // 3. Appel réseau via Proxy CORS pour contourner le blocage local de Brave
+        // 3. Appel RÉSEAU DIRECT vers l'API Rest Countries officielle (Sans Proxy)
         try {
-            // Utilisation d'un proxy public stable (allorigins) pour forcer le passage de la requête
-            const proxyUrl = 'https://allorigins.win';
-            const targetUrl = `https://restcountries.com{encodeURIComponent(cleanQuery)}`;
-            
-            const response = await fetch(`${proxyUrl}${encodeURIComponent(targetUrl)}`);
+            const response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
 
             if (!response.ok) {
-                throw new Error("NETWORK_ERROR");
-            }
-
-            const proxyData = await response.json();
-            
-            // Décapsulation des données textuelles retournées par le proxy en JSON exploitable
-            const data = JSON.parse(proxyData.contents);
-            
-            // Si l'API renvoie une erreur 404 (pays introuvable) encapsulée
-            if (data.status === 404 || !Array.isArray(data) || data.length === 0) {
                 throw new Error("NOT_FOUND");
             }
 
-            // Extraction du premier résultat correspondant
-            const countryData = data[0];
+            const data = await response.json();
             
-            // Rendu graphique de la carte d'identité
-            renderCountryCard(countryData);
+            // Sécurité : Vérification du format de tableau retourné
+            if (!Array.isArray(data) || data.length === 0) {
+                throw new Error("NOT_FOUND");
+            }
+
+            // Extraction et injection graphique du premier résultat
+            renderCountryCard(data[0]);
 
         } catch (error) {
             if (error.message === "NOT_FOUND") {
@@ -63,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayExceptionMessage("Connexion impossible au serveur mondial. Veuillez vérifier votre accès à internet.");
             }
         } finally {
-            // Désactivation du loader dans tous les cas
+            // Désactivation automatique du loader
             loader.style.display = 'none';
             loader.setAttribute('aria-hidden', 'true');
         }
@@ -104,11 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const capitalCity = country.capital && country.capital[0] ? country.capital[0] : "Aucune capitale";
         const geographicalRegion = country.region || "Non spécifiée";
 
-        // Formatage de la population (Espaces pour isoler les milliers)
+        // Formatage de la population requis par le barème (Espaces pour les milliers)
         const rawPopulation = country.population || 0;
         const formattedPopulation = new Intl.NumberFormat('fr-FR').format(rawPopulation).replace(/ /g, ' ');
 
-        // Extraction dynamique de la monnaie
+        // Extraction dynamique de la monnaie officielle
         let currencyString = "Non spécifiée";
         if (country.currencies) {
             const currencyKeys = Object.keys(country.currencies);
@@ -124,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             languagesString = Object.values(country.languages).join(', ');
         }
 
-        // Assemblage sécurisé anti-XSS du DOM via la propriété textContent
+        // Assemblage sécurisé anti-XSS du DOM via textContent
         const cardContainer = document.createElement('article');
         cardContainer.className = "country-card";
 
@@ -133,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const flagImg = document.createElement('img');
         flagImg.src = country.flags?.svg || country.flags?.png || "";
-        flagImg.alt = country.flags?.alt || `Drapeau officiel de l'état : ${nameCommon}`;
+        flagImg.alt = country.flags?.alt || `Drapeau officiel : ${nameCommon}`;
         
         flagWrapper.appendChild(flagImg);
 
