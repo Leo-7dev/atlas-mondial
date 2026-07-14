@@ -6,62 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('loader');
     const resultSection = document.getElementById('resultSection');
 
-    // Base de données de secours intégrée (Mock local) en cas de blocage réseau total
-    const localBackup = {
-        "haiti": {
-            name: { common: "Haiti" },
-            capital: ["Port-au-Prince"],
-            region: "Americas",
-            population: 11402533,
-            currencies: { HTG: { name: "Gourde haïtienne", symbol: "G" } },
-            languages: { hat: "Créole haïtien", fra: "Français" },
-            flags: { svg: "https://flagcdn.com", alt: "Drapeau d'Haïti." }
-        },
-        "canada": {
-            name: { common: "Canada" },
-            capital: ["Ottawa"],
-            region: "Americas",
-            population: 38005238,
-            currencies: { CAD: { name: "Dollar canadien", symbol: "$" } },
-            languages: { eng: "Anglais", fra: "Français" },
-            flags: { svg: "https://flagcdn.com", alt: "Drapeau du Canada." }
-        },
-        "france": {
-            name: { common: "France" },
-            capital: ["Paris"],
-            region: "Europe",
-            population: 67391582,
-            currencies: { EUR: { name: "Euro", symbol: "€" } },
-            languages: { fra: "Français" },
-            flags: { svg: "https://flagcdn.com", alt: "Drapeau de la France." }
-        },
-        "usa": {
-            name: { common: "United States" },
-            capital: ["Washington, D.C."],
-            region: "Americas",
-            population: 332278200,
-            currencies: { USD: { name: "Dollar des États-Unis", symbol: "$" } },
-            languages: { eng: "Anglais" },
-            flags: { svg: "https://flagcdn.com", alt: "Drapeau des États-Unis." }
-        },
-        "brazil": {
-            name: { common: "Brazil" },
-            capital: ["Brasília"],
-            region: "Americas",
-            population: 214326223,
-            currencies: { BRL: { name: "Réal brésilien", symbol: "R$" } },
-            languages: { por: "Portugais" },
-            flags: { svg: "https://flagcdn.com", alt: "Drapeau du Brésil." }
-        }
-    };
-
     searchForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         const rawInput = countryInput.value;
-        const cleanQuery = rawInput.trim().toLowerCase();
+        const cleanQuery = rawInput.trim();
 
-        // Validation A11Y champ vide
+        // 1. Validation de champ vide (Accessibilité A11Y)
         if (cleanQuery === "") {
             countryInput.setAttribute('aria-invalid', 'true');
             countryInput.setAttribute('aria-describedby', 'errorFeedback');
@@ -72,40 +23,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resetErrorState();
 
-        // Activation du loader visuel
+        // 2. Activation de l'indicateur visuel de chargement
         loader.style.display = 'flex';
         loader.setAttribute('aria-hidden', 'false');
         resultSection.textContent = "";
 
+        // 3. Appel Réseau Dynamique branché sur les endpoints mondiaux
         try {
-            // Appel réseau direct
-            const response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
+            // Tentative d'appel direct sur le serveur de l'API principale
+            let response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
 
+            // Si le serveur principal est bloqué ou ne répond pas, basculement instantané sur le miroir CORS d'urgence
             if (!response.ok) {
-                throw new Error("NOT_FOUND");
+                const proxyUrl = 'https://allorigins.win';
+                const targetUrl = `https://restcountries.com{encodeURIComponent(cleanQuery)}`;
+                const proxyResponse = await fetch(`${proxyUrl}${encodeURIComponent(targetUrl)}`);
+                
+                if (!proxyResponse.ok) throw new Error("NOT_FOUND");
+                
+                const proxyData = await proxyResponse.json();
+                const data = JSON.parse(proxyData.contents);
+                
+                if (data.status === 404 || !Array.isArray(data) || data.length === 0) {
+                    throw new Error("NOT_FOUND");
+                }
+                renderCountryCard(data[0]);
+                return;
             }
 
             const data = await response.json();
-            
-            if (!Array.isArray(data) || data.length === 0) {
-                throw new Error("NOT_FOUND");
-            }
+            if (!Array.isArray(data) || data.length === 0) throw new Error("NOT_FOUND");
 
-            // Si l'API en ligne répond, on affiche les données distantes
+            // Rendu graphique à partir du premier résultat valide trouvé
             renderCountryCard(data[0]);
 
         } catch (error) {
-            // Basculement miroir automatique vers la base locale en cas d'erreur ou blocage réseau
-            if (localBackup[cleanQuery]) {
-                console.log("Protocole de secours activé pour : " + cleanQuery);
-                renderCountryCard(localBackup[cleanQuery]);
-            } else if (error.message === "NOT_FOUND") {
+            if (error.message === "NOT_FOUND") {
                 displayExceptionMessage("Aucun résultat trouvé pour cette recherche. Veuillez vérifier l'orthographe.");
             } else {
                 displayExceptionMessage("Connexion impossible au serveur mondial. Veuillez vérifier votre accès à internet.");
             }
         } finally {
-            // Désactivation du loader
+            // Désactivation systématique du loader
             loader.style.display = 'none';
             loader.setAttribute('aria-hidden', 'true');
         }
@@ -166,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             languagesString = Object.values(country.languages).join(', ');
         }
 
-        // Assemblage sécurisé anti-XSS du DOM via textContent
+        // Assemblage sécurisé anti-XSS du DOM via la propriété textContent
         const cardContainer = document.createElement('article');
         cardContainer.className = "country-card";
 
@@ -174,8 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
         flagWrapper.className = "card-flag-wrapper";
         
         const flagImg = document.createElement('img');
-        flagImg.src = country.flags?.svg || "";
-        flagImg.alt = country.flags?.alt || `Drapeau officiel : ${nameCommon}`;
+        flagImg.src = country.flags?.svg || country.flags?.png || "";
+        flagImg.alt = country.flags?.alt || `Drapeau officiel de l'état : ${nameCommon}`;
         
         flagWrapper.appendChild(flagImg);
 
