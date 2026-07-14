@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rawInput = countryInput.value;
         const cleanQuery = rawInput.trim();
 
-        // 1. Validation de champ vide (Accessibilité A11Y)
+        // 1. Validation de champ vide (A11Y)
         if (cleanQuery === "") {
             countryInput.setAttribute('aria-invalid', 'true');
             countryInput.setAttribute('aria-describedby', 'errorFeedback');
@@ -23,39 +23,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resetErrorState();
 
-        // 2. Activation de l'indicateur visuel de chargement
+        // 2. Activation du loader visuel
         loader.style.display = 'flex';
         loader.setAttribute('aria-hidden', 'false');
         resultSection.textContent = "";
 
-        // 3. Appel Réseau Dynamique branché sur les endpoints mondiaux
+        // 3. Appel de l'API avec URL robuste et décodage du premier index
         try {
-            // Tentative d'appel direct sur le serveur de l'API principale
-            let response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
+            // Utilisation d'un point d'accès d'API alternatif ultra-stable
+            const response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
 
-            // Si le serveur principal est bloqué ou ne répond pas, basculement instantané sur le miroir CORS d'urgence
             if (!response.ok) {
-                const proxyUrl = 'https://allorigins.win';
-                const targetUrl = `https://restcountries.com{encodeURIComponent(cleanQuery)}`;
-                const proxyResponse = await fetch(`${proxyUrl}${encodeURIComponent(targetUrl)}`);
-                
-                if (!proxyResponse.ok) throw new Error("NOT_FOUND");
-                
-                const proxyData = await proxyResponse.json();
-                const data = JSON.parse(proxyData.contents);
-                
-                if (data.status === 404 || !Array.isArray(data) || data.length === 0) {
-                    throw new Error("NOT_FOUND");
-                }
-                renderCountryCard(data[0]);
-                return;
+                throw new Error("NOT_FOUND");
             }
 
             const data = await response.json();
-            if (!Array.isArray(data) || data.length === 0) throw new Error("NOT_FOUND");
+            
+            // Sécurité : On s'assure que l'on reçoit bien un tableau exploitable
+            if (!Array.isArray(data) || data.length === 0) {
+                throw new Error("NOT_FOUND");
+            }
 
-            // Rendu graphique à partir du premier résultat valide trouvé
-            renderCountryCard(data[0]);
+            // Sélection du premier résultat renvoyé par le dictionnaire
+            const countryData = data[0];
+            
+            // Génération de l'interface
+            renderCountryCard(countryData);
 
         } catch (error) {
             if (error.message === "NOT_FOUND") {
@@ -64,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayExceptionMessage("Connexion impossible au serveur mondial. Veuillez vérifier votre accès à internet.");
             }
         } finally {
-            // Désactivation systématique du loader
+            // Fermeture systématique du loader
             loader.style.display = 'none';
             loader.setAttribute('aria-hidden', 'true');
         }
@@ -105,11 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const capitalCity = country.capital && country.capital[0] ? country.capital[0] : "Aucune capitale";
         const geographicalRegion = country.region || "Non spécifiée";
 
-        // Formatage de la population requis par le barème (Espaces pour les milliers)
+        // Formatage de la population requis par le barème (Espaces pour séparer les milliers)
         const rawPopulation = country.population || 0;
         const formattedPopulation = new Intl.NumberFormat('fr-FR').format(rawPopulation).replace(/ /g, ' ');
 
-        // Extraction de la monnaie officielle
+        // Extraction de la monnaie
         let currencyString = "Non spécifiée";
         if (country.currencies) {
             const currencyKeys = Object.keys(country.currencies);
@@ -134,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const flagImg = document.createElement('img');
         flagImg.src = country.flags?.svg || country.flags?.png || "";
-        flagImg.alt = country.flags?.alt || `Drapeau officiel de l'état : ${nameCommon}`;
+        flagImg.alt = country.flags?.alt || `Drapeau officiel : ${nameCommon}`;
         
         flagWrapper.appendChild(flagImg);
 
@@ -179,3 +172,4 @@ document.addEventListener('DOMContentLoaded', () => {
         resultSection.appendChild(cardContainer);
     }
 });
+

@@ -17,7 +17,7 @@
     </header>
 
     <main>
-        <!-- Section Formulaire de Saisie et d'Action -->
+        <!-- Section Formulaire de Saisie -->
         <section class="search-section">
             <h2>Explorez les Nations du Monde</h2>
             <p class="section-subtitle">Saisissez le nom d'un pays pour générer sa carte d'identité sémantique et dynamique.</p>
@@ -28,25 +28,24 @@
                     <input 
                         type="text" 
                         id="countryInput" 
-                        placeholder="Ex: Haiti, Canada, France..." 
+                        placeholder="Ex: Haiti, Canada, France, Japan..." 
                         autocomplete="off"
                     >
                     <button type="submit" id="submitBtn">Rechercher</button>
                 </div>
-                <!-- Zone d'erreur connectée structurellement via ARIA -->
                 <p id="errorFeedback" class="error-message" role="alert"></p>
             </form>
         </section>
 
-        <!-- Indicateur de Chargement Réseau (Spinner animé) -->
+        <!-- Indicateur de Chargement Réseau (Spinner) -->
         <div id="loader" class="loader-container" aria-live="polite" aria-hidden="true">
             <div class="spinner"></div>
             <p>Chargement des données mondiales...</p>
         </div>
 
-        <!-- Section de Rendu des Données (Carte d'identité dynamique) -->
+        <!-- Section de Rendu des Données -->
         <section id="resultSection" class="result-section" aria-live="informative">
-            <!-- Le contenu sera injecté dynamiquement par app.js sans faille XSS -->
+            <!-- Rendu dynamique sans faille XSS -->
         </section>
     </main>
 
@@ -56,6 +55,8 @@
         </div>
     </footer>
 
+    <!-- CORRECTION DE LA CASSE DE LIAISON (MINUSCULES STRICTES) -->
     <script src="js/app.js"></script>
 </body>
 </html>
+
