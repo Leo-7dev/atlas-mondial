@@ -1,49 +1,64 @@
-# 🌍 Atlas Mondial Interactif - TIC400
+# Atlas Mondial Interactif
 
-## 📝 Présentation du Projet
-Ce projet a été réalisé dans le cadre du cours **TIC400 (Gestion des Bases de Données & Technologies Web) — Session Été 2026**. 
-L'application est un **Atlas Mondial Interactif** qui permet à un utilisateur de saisir le nom d'un pays en français ou en anglais pour générer instantanément sa carte d'identité sémantique, visuelle et dynamique en interrogeant l'API internationale *REST Countries*.
+Application web (HTML5 / CSS3 / JavaScript vanilla) réalisée dans le cadre du **Devoir 2 — LOG3500 (Été 2026)**, sur le thème des applications web asynchrones connectées à une API réelle.
 
-## 🚀 Fonctionnalités Clés
-- **Asynchronisme Avancé :** Utilisation de l'API moderne `fetch` couplée à l'architecture `async / await` structurée dans un bloc de capture robuste `try...catch`.
-- **Accessibilité Numérique (A11Y) :** Gestion sémantique et dynamique des erreurs de saisie à l'aide des attributs universels `aria-invalid` and `aria-describedby` connectés structurellement au lecteur d'écran.
-- **Sécurité et Protection XSS :** Exclusion stricte de la propriété vulnérable `innerHTML` pour l'injection des variables textuelles issues de l'API, remplacée exclusivement par la propriété sécurisée `textContent`.
-- **Indicateur de Chargement :** Intégration d'un composant visuel dynamique (*Spinner animé*) s'activant durant les requêtes réseau.
-- **Design Responsive :** Mise en page asymétrique moderne propulsée par CSS Grid et Flexbox, offrant une adaptation esthétique absolue sur smartphones, tablettes et ordinateurs.
+## Description
 
-## 📁 Structure de l'Arborescence
-Le projet respecte scrupuleusement l'architecture de dossiers exigée par le barème académique :
+L'utilisateur saisit le nom d'un pays dans un formulaire de recherche. L'application interroge en arrière-plan la **REST Countries API (v3.1)**, affiche un indicateur de chargement pendant la requête, puis génère une carte d'identité visuelle et dynamique du pays trouvé.
+
+## Fonctionnalités
+
+- Recherche d'un pays par son nom.
+- Carte d'identité affichant :
+  - le drapeau officiel (image SVG) avec texte alternatif descriptif ;
+  - le nom commun du pays ;
+  - la capitale ;
+  - la population, formatée avec des espaces comme séparateurs de milliers (ex. `11 402 533`) ;
+  - la région géographique ;
+  - la ou les monnaies officielles ;
+  - la ou les langues parlées.
+- Indicateur de chargement (spinner animé) pendant l'appel réseau.
+- Validation accessible du formulaire : `aria-invalid`, message d'erreur relié via `aria-describedby`, réinitialisation automatique dès correction de la saisie.
+- Gestion des erreurs :
+  - Aucun résultat / recherche invalide → *"Aucun résultat trouvé pour cette recherche. Veuillez vérifier l'orthographe."*
+  - Erreur réseau ou serveur inaccessible → *"Connexion impossible. Veuillez vérifier votre accès à internet."*
+- Utilisation exclusive de `fetch()` avec `async/await` et blocs `try...catch`.
+- Sécurité du DOM : toutes les données issues de l'API sont injectées via `textContent` (jamais `innerHTML`), afin d'éviter tout risque de faille XSS.
+- Mise en page responsive (Flexbox / CSS Grid) adaptée aux smartphones, tablettes et ordinateurs via des *media queries*.
+
+## Structure du projet
+
+```
 ├── index.html
 ├── css/
 │   └── style.css
 ├── js/
 │   └── app.js
 └── README.md
+```
 
-## 📡 API Mondiale Utilisée
-L'application interroge en arrière-plan la version 3.1 de l'API globale :
-`https://restcountries.com{nom_du_pays}`
+## Technologies
 
-### Données Extraites du JSON :
-1. **Drapeau officiel :** Récupération de l'image vectorielle SVG (`flags.svg`) combinée à sa description textuelle alternative (`flags.alt`).
-2. **Nom de la nation :** Extraction du nom commun officiel (`name.common`).
-3. **Capitale administrative :** Lecture du premier index du tableau (`capital[0]`).
-4. **Démographie :** Formatage de la population avec des espaces pour séparer les milliers via l'objet natif `Intl.NumberFormat`.
-5. **Géographie :** Identification du continent ou de la région géographique (`region`).
-6. **Économie & Langues :** Extraction dynamique des dictionnaires de monnaies (`currencies`) et des langues parlées (`languages`).
+- HTML5 sémantique (`header`, `nav`, `main`, `section`, `footer`).
+- CSS3 (Flexbox, CSS Grid, Media Queries, animations).
+- JavaScript ES6+ (fetch, async/await, manipulation du DOM).
+- [REST Countries API v3.1](https://restcountries.com/) — source de données.
 
-## ⚖️ Conformité et Validation W3C
-Les codes sources de ce projet ont été validés avec succès par les instances officielles, garantissant un rendu sans aucune erreur de syntaxe ou de conformité :
-- **Validateur HTML5 :** 100% conforme sur https://w3.org
-- **Validateur CSS3 :** 100% conforme sur https://w3.org
+## Utilisation
 
-## 🛠️ Instructions d'Installation Locale
-1. Clonez ce dépôt public sur votre machine :
-   ```bash
-   git clone https://github.com
-   ```
-2. Ouvrez le dossier dans votre éditeur de code (Visual Studio Code).
-3. Lancez le fichier `index.html` directement dans votre navigateur internet (Brave, Chrome, Safari).
+1. Cloner ou télécharger le dépôt.
+2. Ouvrir le fichier `index.html` dans un navigateur (ou servir le dossier via un serveur local, ex. l'extension "Live Server" de VS Code).
+3. Saisir le nom d'un pays (en anglais ou dans sa langue courante, ex. `Haiti`, `France`, `Japan`) et cliquer sur **Rechercher**.
 
----
-*Projet individuel soumis sur la plateforme académique Moodle pour l'évaluation finale de TIC400.*
+## Conformité W3C
+
+Le document HTML et la feuille de style CSS ont été validés respectivement via :
+
+- [validator.w3.org](https://validator.w3.org/)
+- [jigsaw.w3.org/css-validator](https://jigsaw.w3.org/css-validator/)
+
+Le rapport détaillé des erreurs initiales et des captures d'écran de conformité finale est fourni séparément en PDF, tel que requis par la consigne de remise.
+
+## Auteur
+
+Devoir individuel — LOG3500, ISTEAH, Été 2026.

@@ -1,185 +1,208 @@
-document.addEventListener('DOMContentLoaded', () => {
-    
-    const searchForm = document.getElementById('searchForm');
-    const countryInput = document.getElementById('countryInput');
-    const errorFeedback = document.getElementById('errorFeedback');
-    const loader = document.getElementById('loader');
-    const resultSection = document.getElementById('resultSection');
 
-    searchForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+'use strict';
 
-        const rawInput = countryInput.value;
-        const cleanQuery = rawInput.trim();
+/* ==========================================================================
+   Atlas Mondial Interactif — Logique applicative
+   Source de données : REST Countries API (v3.1)
+   ========================================================================== */
 
-        // 1. Validation de champ vide (Accessibilité A11Y)
-        if (cleanQuery === "") {
-            countryInput.setAttribute('aria-invalid', 'true');
-            countryInput.setAttribute('aria-describedby', 'errorFeedback');
-            errorFeedback.textContent = "Le champ de recherche ne peut pas être vide. Veuillez saisir un nom de pays.";
-            resultSection.textContent = "";
-            return;
-        }
+const API_BASE_URL = 'https://restcountries.com/v3.1/name/';
 
-        resetErrorState();
+// Références aux éléments du DOM
+const form = document.getElementById('country-form');
+const input = document.getElementById('country-input');
+const errorMessage = document.getElementById('country-error');
+const loadingIndicator = document.getElementById('loading');
+const statusMessage = document.getElementById('message');
+const countryCard = document.getElementById('country-card');
 
-        // 2. Activation de l'indicateur visuel de chargement
-        loader.style.display = 'flex';
-        loader.setAttribute('aria-hidden', 'false');
-        resultSection.textContent = "";
+const flagEl = document.getElementById('country-flag');
+const nameEl = document.getElementById('country-name');
+const capitalEl = document.getElementById('country-capital');
+const populationEl = document.getElementById('country-population');
+const regionEl = document.getElementById('country-region');
+const currencyEl = document.getElementById('country-currency');
+const languagesEl = document.getElementById('country-languages');
 
-        // 3. Appel de l'API avec double protocole réseau de secours
-        try {
-            let data = null;
+/**
+ * Formate un nombre en ajoutant des espaces comme séparateurs de milliers.
+ * Ex: 11402533 -> "11 402 533"
+ * @param {number} value
+ * @returns {string}
+ */
+function formatPopulation(value) {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
 
-            try {
-                // Premier essai : API directe principale
-                const response = await fetch(`https://restcountries.com{encodeURIComponent(cleanQuery)}`);
-                if (response.ok) {
-                    data = await response.json();
-                }
-            } catch (networkError) {
-                console.log("Serveur principal injoignable, basculement sur le miroir réseau.");
-            }
+/**
+ * Active l'état d'erreur d'accessibilité sur le champ de recherche.
+ * @param {string} text
+ */
+function showInputError(text) {
+  input.setAttribute('aria-invalid', 'true');
+  input.setAttribute('aria-describedby', 'country-error');
+  errorMessage.textContent = text;
+}
 
-            // Deuxième essai : Si le premier a échoué ou a été bloqué par Brave/CORS
-            if (!data) {
-                const backupResponse = await fetch(`https://allorigins.win{encodeURIComponent('https://restcountries.com' + encodeURIComponent(cleanQuery))}`);
-                if (!backupResponse.ok) throw new Error("NOT_FOUND");
-                const proxyData = await backupResponse.json();
-                data = JSON.parse(proxyData.contents);
-            }
+/**
+ * Réinitialise l'état d'erreur d'accessibilité sur le champ de recherche.
+ */
+function clearInputError() {
+  input.removeAttribute('aria-invalid');
+  input.removeAttribute('aria-describedby');
+  errorMessage.textContent = '';
+}
 
-            // Sécurité : On s'assure que le résultat contient un tableau valide
-            if (data.status === 404 || !Array.isArray(data) || data.length === 0) {
-                throw new Error("NOT_FOUND");
-            }
+/**
+ * Affiche l'indicateur de chargement et masque les autres blocs.
+ */
+function showLoading() {
+  loadingIndicator.hidden = false;
+}
 
-            // Extraction cruciale du premier index du pays trouvé
-            const countryData = data[0];
-            
-            // Rendu de la carte d'identité sémantique
-            renderCountryCard(countryData);
+/**
+ * Masque l'indicateur de chargement.
+ */
+function hideLoading() {
+  loadingIndicator.hidden = true;
+}
 
-        } catch (error) {
-            if (error.message === "NOT_FOUND") {
-                displayExceptionMessage("Aucun résultat trouvé pour cette recherche. Veuillez vérifier l'orthographe.");
-            } else {
-                displayExceptionMessage("Connexion impossible au serveur mondial. Veuillez vérifier votre accès à internet.");
-            }
-        } finally {
-            // Désactivation automatique du loader
-            loader.style.display = 'none';
-            loader.setAttribute('aria-hidden', 'true');
-        }
-    });
+/**
+ * Affiche un message de statut (erreur API ou réseau).
+ * @param {string} text
+ */
+function showStatusMessage(text) {
+  statusMessage.textContent = text;
+  statusMessage.hidden = false;
+}
 
-    countryInput.addEventListener('input', () => {
-        if (countryInput.getAttribute('aria-invalid') === 'true') {
-            resetErrorState();
-        }
-    });
+/**
+ * Masque et vide le message de statut.
+ */
+function hideStatusMessage() {
+  statusMessage.textContent = '';
+  statusMessage.hidden = true;
+}
 
-    function resetErrorState() {
-        countryInput.removeAttribute('aria-invalid');
-        countryInput.removeAttribute('aria-describedby');
-        errorFeedback.textContent = "";
+/**
+ * Construit la liste des monnaies officielles sous forme de texte lisible.
+ * @param {Object|undefined} currencies
+ * @returns {string}
+ */
+function buildCurrencyText(currencies) {
+  if (!currencies || typeof currencies !== 'object') {
+    return 'Non disponible';
+  }
+  const entries = Object.values(currencies).map((currency) => {
+    if (currency && currency.name) {
+      return currency.symbol ? `${currency.name} (${currency.symbol})` : currency.name;
+    }
+    return null;
+  }).filter(Boolean);
+
+  return entries.length > 0 ? entries.join(', ') : 'Non disponible';
+}
+
+/**
+ * Construit la liste des langues parlées sous forme de texte lisible.
+ * @param {Object|undefined} languages
+ * @returns {string}
+ */
+function buildLanguagesText(languages) {
+  if (!languages || typeof languages !== 'object') {
+    return 'Non disponible';
+  }
+  const entries = Object.values(languages);
+  return entries.length > 0 ? entries.join(', ') : 'Non disponible';
+}
+
+/**
+ * Injecte les données d'un pays dans la carte d'identité, en utilisant
+ * exclusivement textContent (et les propriétés src/alt pour l'image)
+ * afin d'éviter tout risque de faille XSS via innerHTML.
+ * @param {Object} country
+ */
+function renderCountry(country) {
+  const commonName = (country.name && country.name.common) || 'Nom inconnu';
+
+  if (country.flags && country.flags.svg) {
+    flagEl.src = country.flags.svg;
+    flagEl.alt = country.flags.alt || `Drapeau de ${commonName}`;
+  } else {
+    flagEl.src = '';
+    flagEl.alt = `Drapeau de ${commonName} non disponible`;
+  }
+
+  nameEl.textContent = commonName;
+
+  const capital = (Array.isArray(country.capital) && country.capital.length > 0)
+    ? country.capital[0]
+    : 'Non disponible';
+  capitalEl.textContent = capital;
+
+  populationEl.textContent = typeof country.population === 'number'
+    ? `${formatPopulation(country.population)} habitants`
+    : 'Non disponible';
+
+  regionEl.textContent = country.region || 'Non disponible';
+  currencyEl.textContent = buildCurrencyText(country.currencies);
+  languagesEl.textContent = buildLanguagesText(country.languages);
+
+  countryCard.hidden = false;
+}
+
+/**
+ * Récupère les données d'un pays depuis l'API REST Countries et met à
+ * jour l'interface (chargement, résultat ou message d'erreur).
+ * @param {string} countryName
+ */
+async function fetchCountry(countryName) {
+  showLoading();
+  hideStatusMessage();
+  countryCard.hidden = true;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${encodeURIComponent(countryName)}`);
+
+    if (!response.ok) {
+      showStatusMessage("Aucun résultat trouvé pour cette recherche. Veuillez vérifier l'orthographe.");
+      return;
     }
 
-    function displayExceptionMessage(message) {
-        resultSection.textContent = "";
-        const alertBox = document.createElement('div');
-        alertBox.className = "info-item";
-        alertBox.style.borderLeftColor = "var(--error)";
-        alertBox.style.maxWidth = "800px";
-        alertBox.style.margin = "0 auto";
-        
-        const alertText = document.createElement('p');
-        alertText.style.fontWeight = "600";
-        alertText.textContent = message;
-        
-        alertBox.appendChild(alertText);
-        resultSection.appendChild(alertBox);
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      showStatusMessage("Aucun résultat trouvé pour cette recherche. Veuillez vérifier l'orthographe.");
+      return;
     }
 
-    function renderCountryCard(country) {
-        resultSection.textContent = "";
+    renderCountry(data[0]);
+  } catch (error) {
+    showStatusMessage('Connexion impossible. Veuillez vérifier votre accès à internet.');
+  } finally {
+    hideLoading();
+  }
+}
 
-        const nameCommon = country.name?.common || "Non spécifié";
-        const capitalCity = country.capital && country.capital[0] ? country.capital[0] : "Aucune capitale";
-        const geographicalRegion = country.region || "Non spécifiée";
+// Réinitialise l'état d'erreur dès que l'utilisateur saisit un caractère valide.
+input.addEventListener('input', () => {
+  if (input.value.trim().length > 0) {
+    clearInputError();
+  }
+});
 
-        // Formatage de la population avec des espaces requis par votre barème (ex: 11 402 533)
-        const rawPopulation = country.population || 0;
-        const formattedPopulation = new Intl.NumberFormat('fr-FR').format(rawPopulation).replace(/ /g, ' ');
+// Interception de la soumission du formulaire.
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
 
-        // Extraction de la monnaie officielle
-        let currencyString = "Non spécifiée";
-        if (country.currencies) {
-            const currencyKeys = Object.keys(country.currencies);
-            if (currencyKeys.length > 0) {
-                const firstCurrency = country.currencies[currencyKeys[0]];
-                currencyString = `${firstCurrency.name} (${firstCurrency.symbol || ''})`;
-            }
-        }
+  const query = input.value.trim();
 
-        // Extraction des langues parlées
-        let languagesString = "Non spécifiées";
-        if (country.languages) {
-            languagesString = Object.values(country.languages).join(', ');
-        }
+  if (query === '') {
+    showInputError('Veuillez entrer le nom d\'un pays avant de lancer la recherche.');
+    input.focus();
+    return;
+  }
 
-        // Assemblage 100% sécurisé anti-XSS du DOM via la propriété textContent
-        const cardContainer = document.createElement('article');
-        cardContainer.className = "country-card";
-
-        const flagWrapper = document.createElement('div');
-        flagWrapper.className = "card-flag-wrapper";
-        
-        const flagImg = document.createElement('img');
-        flagImg.src = country.flags?.svg || country.flags?.png || "";
-        flagImg.alt = country.flags?.alt || `Drapeau officiel : ${nameCommon}`;
-        
-        flagWrapper.appendChild(flagImg);
-
-        const cardContent = document.createElement('div');
-        cardContent.className = "card-content";
-
-        const mainTitle = document.createElement('h3');
-        mainTitle.textContent = nameCommon;
-        cardContent.appendChild(mainTitle);
-
-        const infoGrid = document.createElement('div');
-        infoGrid.className = "info-grid";
-
-        const fieldsConfig = [
-            { label: "Capitale", value: capitalCity },
-            { label: "Région / Continent", value: geographicalRegion },
-            { label: "Population", value: formattedPopulation },
-            { label: "Monnaie Officielle", value: currencyString },
-            { label: "Langues Parlées", value: languagesString }
-        ];
-
-        fieldsConfig.forEach(field => {
-            const infoItem = document.createElement('div');
-            infoItem.className = "info-item";
-
-            const labelSpan = document.createElement('span');
-            labelSpan.className = "label";
-            labelSpan.textContent = field.label;
-
-            const valueSpan = document.createElement('span');
-            valueSpan.className = "value";
-            valueSpan.textContent = field.value;
-
-            infoItem.appendChild(labelSpan);
-            infoItem.appendChild(valueSpan);
-            infoGrid.appendChild(infoItem);
-        });
-
-        cardContent.appendChild(infoGrid);
-        cardContainer.appendChild(flagWrapper);
-        cardContainer.appendChild(cardContent);
-        resultSection.appendChild(cardContainer);
-    }
+  clearInputError();
+  fetchCountry(query);
 });

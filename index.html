@@ -1,68 +1,101 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atlas Mondial Interactif - Recherche Globale</title>
-    <!-- Chargement de la feuille de style responsive requise par le barème -->
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas Mondial Interactif</title>
+  <meta name="description" content="Recherchez un pays et découvrez sa carte d'identité complète : drapeau, capitale, population, région, monnaie et langues.">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <header class="site-header">
+    <div class="header-content">
+      <p class="brand">
+        <span class="brand-icon" aria-hidden="true">&#127760;</span>
+        <span class="brand-name">World Atlas</span>
+      </p>
+      <nav aria-label="Navigation principale">
+        <ul class="nav-list">
+          <li><a href="#recherche">Recherche</a></li>
+          <li><a href="#resultat">Résultat</a></li>
+          <li><a href="#a-propos">À propos</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
 
-    <!-- Structure HTML5 Sémantique : En-tête et Navigation -->
-    <header>
-        <nav class="navbar">
-            <div class="logo-container">
-                <span class="logo-text">🌍 ATLAS MONDIAL</span>
+  <main>
+    <section id="recherche" class="search-section" aria-labelledby="search-heading">
+      <h1 id="search-heading">Atlas Mondial Interactif</h1>
+      <p class="subtitle">Saisissez le nom d'un pays pour découvrir sa carte d'identité.</p>
+
+      <form id="country-form" class="search-form" novalidate>
+        <div class="form-group">
+          <label for="country-input">Nom du pays</label>
+          <input
+            type="text"
+            id="country-input"
+            name="country"
+            placeholder="Ex : Haïti, France, Japon..."
+            autocomplete="off"
+          >
+          <span id="country-error" class="error-message"></span>
+        </div>
+        <button type="submit" class="search-btn">Rechercher</button>
+      </form>
+
+      <div id="loading" class="loading" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Chargement...</p>
+      </div>
+
+      <p id="message" class="message" role="alert" hidden></p>
+    </section>
+
+    <section id="resultat" class="result-section" aria-labelledby="result-heading">
+      <h2 id="result-heading" class="sr-only">Résultat de la recherche</h2>
+      <article id="country-card" class="country-card" hidden>
+        <div class="flag-wrapper">
+          <img id="country-flag" src="" alt="" class="country-flag">
+        </div>
+        <div class="country-info">
+          <h3 id="country-name" class="country-name"></h3>
+          <dl class="info-list">
+            <div class="info-item">
+              <dt><span aria-hidden="true">&#127963;&#65039;</span> Capitale</dt>
+              <dd id="country-capital"></dd>
             </div>
-        </nav>
-    </header>
-
-    <!-- Zone principale d'architecture sémantique -->
-    <main>
-        
-        <!-- Section 1 : Formulaire d'action et de saisie utilisateur -->
-        <section class="search-section">
-            <h2>Explorez les Nations du Monde</h2>
-            <p class="section-subtitle">Saisissez le nom d'un pays pour générer sa carte d'identité sémantique, visuelle et dynamique.</p>
-            
-            <form id="searchForm" novalidate>
-                <div class="input-group">
-                    <label for="countryInput" class="visually-hidden">Nom du pays :</label>
-                    <input 
-                        type="text" 
-                        id="countryInput" 
-                        placeholder="Ex: Haiti, Canada, France, Japan..." 
-                        autocomplete="off"
-                    >
-                    <button type="submit" id="submitBtn">Rechercher</button>
-                </div>
-                <!-- Zone de feedback d'erreur connectée structurellement via ARIA -->
-                <p id="errorFeedback" class="error-message" role="alert"></p>
-            </form>
-        </section>
-
-        <!-- Section 2 : Indicateur de Chargement Réseau (Spinner d'attente animé) -->
-        <div id="loader" class="loader-container" aria-live="polite" aria-hidden="true">
-            <div class="spinner"></div>
-            <p>Chargement des données mondiales...</p>
+            <div class="info-item">
+              <dt><span aria-hidden="true">&#128101;</span> Population</dt>
+              <dd id="country-population"></dd>
+            </div>
+            <div class="info-item">
+              <dt><span aria-hidden="true">&#127760;</span> Région</dt>
+              <dd id="country-region"></dd>
+            </div>
+            <div class="info-item">
+              <dt><span aria-hidden="true">&#128176;</span> Monnaie</dt>
+              <dd id="country-currency"></dd>
+            </div>
+            <div class="info-item">
+              <dt><span aria-hidden="true">&#128172;</span> Langues</dt>
+              <dd id="country-languages"></dd>
+            </div>
+          </dl>
         </div>
+      </article>
+    </section>
 
-        <!-- Section 3 : Zone de rendu et d'injection des données du JSON -->
-        <section id="resultSection" class="result-section" aria-live="informative">
-            <!-- Le contenu de la carte d'identité sera injecté dynamiquement par js/app.js -->
-        </section>
+    <section id="a-propos" class="about-section" aria-labelledby="about-heading">
+      <h2 id="about-heading">À propos</h2>
+      <p>Cette application interroge la <a href="https://restcountries.com/" target="_blank" rel="noopener noreferrer">REST Countries API</a> en temps réel pour construire une carte d'identité visuelle et dynamique de n'importe quel pays du monde.</p>
+    </section>
+  </main>
 
-    </main>
+  <footer class="site-footer">
+    <p>&copy; 2026 Atlas Mondial Interactif — Devoir LOG3500. Données fournies par <a href="https://restcountries.com" target="_blank" rel="noopener noreferrer">REST Countries API</a>.</p>
+  </footer>
 
-    <!-- Structure HTML5 Sémantique : Pied de page -->
-    <footer>
-        <div class="footer-container">
-            <p>&copy; 2026 Atlas Mondial Interactif - Projet Académique TIC400.</p>
-        </div>
-    </footer>
-
-    <!-- Liaison finale du script en minuscules strictes (Conformité de casse pour GitHub Pages) -->
-    <script src="js/app.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
